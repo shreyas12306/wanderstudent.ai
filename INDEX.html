@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WanderStudent — AI Travel Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Cabinet+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #08090e;
+  --surface: #0f1119;
+  --card: #141720;
+  --card2: #1a1f2e;
+  --border: #252a3a;
+  --accent: #f59e0b;
+  --accent2: #ef4444;
+  --blue: #3b82f6;
+  --teal: #06b6d4;
+  --green: #10b981;
+  --text: #e8eaf0;
+  --muted: #6b7280;
+  --radius: 16px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Cabinet Grotesk', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── PAGE ROUTING ─── */
+.page { display: none; min-height: 100vh; }
+.page.active { display: flex; flex-direction: column; }
+
+/* ─── NOISE OVERLAY ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.35;
+}
+
+/* ─── AUTH PAGE ─── */
+.auth-page {
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 2rem;
+  min-height: 100vh;
+}
+.auth-bg {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 20%, rgba(245,158,11,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 85% 75%, rgba(59,130,246,0.1) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(6,182,212,0.05) 0%, transparent 55%);
+  z-index: 0;
+}
+.auth-dots {
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+  z-index: 0;
+}
+.auth-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 440px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 2.5rem;
+  animation: slideUp 0.5s ease;
+}
+.auth-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2rem;
+}
+.auth-logo-icon {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+}
+.auth-logo-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+.auth-logo-name span { color: var(--accent); }
+.auth-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 0.4rem;
+}
+.auth-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; line-height: 1.6; }
+.form-group { display: flex; flex-direction: column; gap: 7px; margin-bottom: 1rem; }
+label { font-size: 0.78rem; font-weight: 700; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+input, select, textarea {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: var(--text);
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+}
+select option { background: #1a1f2e; }
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--accent) 0%, #f97316 100%);
+  border: none;
+  border-radius: 12px;
+  color: #000;
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: all 0.2s;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(245,158,11,0.3); }
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.auth-switch {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.auth-switch a { color: var(--accent); cursor: pointer; font-weight: 700; text-decoration: none; }
+.auth-switch a:hover { text-decoration: underline; }
+.err-msg { color: var(--accent2); font-size: 0.82rem; margin-top: -0.5rem; margin-bottom: 0.5rem; }
+.auth-divider {
+  display: flex; align-items: center; gap: 12px;
+  color: var(--muted); font-size: 0.78rem;
+  margin: 1.2rem 0;
+}
+.auth-divider::before, .auth-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ─── NAVBAR ─── */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(8,9,14,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 62px;
+  flex-shrink: 0;
+}
+.nav-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+.nav-logo span { color: var(--accent); }
+.nav-right { display: flex; align-items: center; gap: 12px; }
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.nav-avatar {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #000;
+}
+.btn-sm {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+.btn-accent {
+  background: rgba(245,158,11,0.12);
+  border-color: rgba(245,158,11,0.3);
+  color: var(--accent);
+}
+.btn-accent:hover { background: var(--accent); color: #000; }
+
+/* ─── DASHBOARD ─── */
+.dashboard-page { background: var(--bg); }
+.dash-body { max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; flex: 1; }
+.dash-hero {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2.5rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+.dash-hero-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 80% at 90% 50%, rgba(245,158,11,0.08) 0%, transparent 60%);
+}
+.dash-hero-content { position: relative; z-index: 1; }
+.dash-greeting {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.7rem;
+  font-weight: 800;
+  margin-bottom: 0.3rem;
+}
+.dash-greeting span { color: var(--accent); }
+.dash-greeting-sub { color: var(--muted); font-size: 0.92rem; margin-bottom: 1.5rem; }
+.dash-stats {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+.dash-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dash-stat-val { font-size: 1.5rem; font-weight: 800; color: var(--accent); font-family: 'Syne', sans-serif; }
+.dash-stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.dash-section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.feature-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.feature-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--feature-color, rgba(245,158,11,0.05)) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.feature-card:hover::before { opacity: 1; }
+.feature-card:hover { border-color: var(--feature-border, rgba(245,158,11,0.3)); transform: translateY(-3px); }
+.feature-icon { font-size: 2rem; margin-bottom: 0.8rem; display: block; }
+.feature-name { font-weight: 800; font-size: 1rem; margin-bottom: 4px; }
+.feature-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+.ai-badge {
+  display: inline-block;
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.25);
+  color: var(--accent);
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 100px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+.saved-trips-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+.trip-card {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.trip-card:hover { border-color: var(--blue); transform: translateY(-2px); }
+.trip-dest { font-weight: 800; font-size: 1rem; margin-bottom: 4px; }
+.trip-meta { font-size: 0.78rem; color: var(--muted); }
+.trip-chip {
+  display: inline-block;
+  background: rgba(59,130,246,0.1);
+  color: var(--blue);
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 100px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  margin-top: 8px;
+}
+.empty-trips {
+  grid-column: 1/-1;
+  text-align: center;
+  padding: 3rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* ─── PLANNER PAGE ─── */
+.planner-page { background: var(--bg); }
+.planner-body { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 6rem; flex: 1; }
+
+/* ─── SECTION HEADER ─── */
+.section-hd { margin-bottom: 2rem; }
+.section-hd h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.section-hd p { color: var(--muted); font-size: 0.9rem; }
+
+/* ─── INTEREST TAGS ─── */
+.tags-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag {
+  padding: 7px 15px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'Cabinet Grotesk', sans-serif;
+}
+.tag:hover { border-color: var(--accent); color: var(--accent); }
+.tag.active { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.4); color: var(--accent); }
+
+/* ─── FORM CARD ─── */
+.form-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+}
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; margin-bottom: 1.2rem; }
+
+/* ─── GENERATE BUTTON ─── */
+.btn-generate {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--accent) 0%, #f97316 100%);
+  border: none;
+  border-radius: 13px;
+  color: #000;
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.btn-generate:hover { transform: translateY(-2px); box-shadow: 0 12px 35px rgba(245,158,11,0.3); }
+.btn-generate:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ─── TABS ─── */
+.tabs-row {
+  display: flex;
+  gap: 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 5px;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  overflow-x: auto;
+}
+.tab-btn {
+  flex: 1;
+  min-width: 90px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.tab-btn.active { background: linear-gradient(135deg, var(--accent), #f97316); color: #000; }
+.tab-pane { display: none; animation: fadeUp 0.3s ease; }
+.tab-pane.active { display: block; }
+
+/* ─── OUTPUT AREA ─── */
+.output-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.8rem;
+  margin-bottom: 1.5rem;
+  min-height: 180px;
+  line-height: 1.8;
+  font-size: 0.92rem;
+  color: #cbd5e1;
+  position: relative;
+}
+.output-card h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.2rem;
+  color: var(--accent);
+  margin: 1.2rem 0 0.5rem;
+  font-weight: 800;
+}
+.output-card h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem;
+  color: var(--teal);
+  margin: 1rem 0 0.4rem;
+  font-weight: 700;
+}
+.output-card h4 { color: var(--text); font-weight: 700; margin: 0.8rem 0 0.3rem; }
+.output-card strong { color: var(--text); font-weight: 700; }
+.output-card ul { padding-left: 1.3rem; }
+.output-card li { margin-bottom: 4px; }
+.output-card p { margin-bottom: 0.6rem; }
+.output-card hr { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 160px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.9rem;
+}
+.empty-icon { font-size: 2.5rem; opacity: 0.5; }
+.streaming-cursor {
+  display: inline-block;
+  width: 10px; height: 18px;
+  background: var(--accent);
+  border-radius: 2px;
+  animation: blink 0.8s step-end infinite;
+  vertical-align: middle;
+  margin-left: 2px;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ─── BUDGET BARS ─── */
+.budget-visual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+@media (max-width: 600px) { .budget-visual { grid-template-columns: 1fr; } }
+.bv-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.2rem;
+}
+.bv-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.bv-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.bv-amount { font-size: 1.4rem; font-weight: 800; }
+.bv-bar-wrap { height: 5px; background: var(--border); border-radius: 100px; overflow: hidden; }
+.bv-bar { height: 100%; border-radius: 100px; width: 0; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+.bv-pct { font-size: 0.7rem; color: var(--muted); margin-top: 5px; }
+
+/* ─── COMPARE TOOL ─── */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 600px) { .compare-grid { grid-template-columns: 1fr; } }
+
+/* ─── CHAT BUBBLE ─── */
+.chat-bubble-btn {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 8px 30px rgba(245,158,11,0.4);
+  z-index: 500;
+  transition: all 0.2s;
+  animation: pulse-shadow 3s infinite;
+}
+.chat-bubble-btn:hover { transform: scale(1.1); }
+@keyframes pulse-shadow {
+  0%, 100% { box-shadow: 0 8px 30px rgba(245,158,11,0.4); }
+  50% { box-shadow: 0 8px 45px rgba(245,158,11,0.6); }
+}
+.chat-panel {
+  position: fixed;
+  bottom: 100px;
+  right: 28px;
+  width: 360px;
+  max-height: 520px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  z-index: 499;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  transition: all 0.3s cubic-bezier(.4,0,.2,1);
+  transform-origin: bottom right;
+}
+.chat-panel.hidden { transform: scale(0.8); opacity: 0; pointer-events: none; }
+.chat-header {
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.chat-ai-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+}
+.chat-ai-name { font-weight: 800; font-size: 0.95rem; }
+.chat-ai-status { font-size: 0.72rem; color: var(--green); display: flex; align-items: center; gap: 4px; }
+.chat-ai-status::before { content: ''; width: 6px; height: 6px; background: var(--green); border-radius: 50%; }
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.chat-msg {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  animation: fadeUp 0.2s ease;
+}
+.chat-msg.user {
+  background: rgba(245,158,11,0.15);
+  border: 1px solid rgba(245,158,11,0.2);
+  align-self: flex-end;
+  color: var(--text);
+}
+.chat-msg.ai {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  align-self: flex-start;
+  color: #cbd5e1;
+}
+.chat-input-row {
+  padding: 0.8rem 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.chat-input {
+  flex: 1;
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 0.85rem;
+  outline: none;
+  resize: none;
+  max-height: 80px;
+  transition: border-color 0.2s;
+}
+.chat-input:focus { border-color: var(--accent); }
+.chat-send {
+  width: 40px; height: 40px;
+  background: var(--accent);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.chat-send:hover { background: #f97316; }
+.chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ─── CHIP SUGGESTIONS IN CHAT ─── */
+.chat-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.chat-chip {
+  padding: 5px 12px;
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.18s;
+  font-family: 'Cabinet Grotesk', sans-serif;
+}
+.chat-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ─── DESTINATION FINDER ─── */
+.dest-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+.dest-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.dest-card:hover { border-color: var(--teal); transform: translateY(-3px); }
+.dest-name { font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 800; margin-bottom: 4px; }
+.dest-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.25);
+  color: var(--green);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 100px;
+  margin-bottom: 0.8rem;
+}
+.dest-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+
+/* ─── SPLITTER ─── */
+.split-result {
+  background: rgba(6,182,212,0.08);
+  border: 1px solid rgba(6,182,212,0.2);
+  border-radius: 14px;
+  padding: 1.5rem;
+  text-align: center;
+  margin-top: 1rem;
+}
+.split-amount { font-family: 'Syne', sans-serif; font-size: 2.8rem; font-weight: 800; color: var(--teal); }
+.split-meta { color: var(--muted); font-size: 0.85rem; margin-top: 6px; }
+.expense-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+
+/* ─── TRANSPORT TABLE ─── */
+.transport-tbl { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.transport-tbl th { text-align: left; padding: 10px 14px; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border); }
+.transport-tbl td { padding: 13px 14px; border-bottom: 1px solid rgba(37,42,58,0.6); }
+.transport-tbl tr:last-child td { border-bottom: none; }
+.best-tag { display: inline-block; background: rgba(245,158,11,0.12); color: var(--accent); border: 1px solid rgba(245,158,11,0.25); font-size: 0.65rem; font-weight: 800; padding: 2px 9px; border-radius: 100px; text-transform: uppercase; }
+
+/* ─── PHRASEBOOK ─── */
+.phrase-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.phrase-card {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.phrase-card:hover { border-color: var(--blue); }
+.phrase-english { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+.phrase-local { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.phrase-pronounce { font-size: 0.75rem; color: var(--blue); font-style: italic; }
+
+/* ─── INFO BANNER ─── */
+.info-banner {
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: #93c5fd;
+  margin-bottom: 1.2rem;
+  line-height: 1.6;
+}
+.info-banner span { flex-shrink: 0; }
+
+/* ─── ANIMATIONS ─── */
+@keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 640px) {
+  .auth-card { padding: 1.8rem 1.5rem; }
+  .navbar { padding: 0 1rem; }
+  .dash-body, .planner-body { padding: 1.5rem 1rem 5rem; }
+  .chat-panel { right: 12px; width: calc(100vw - 24px); }
+  .chat-bubble-btn { right: 16px; bottom: 20px; }
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 100px; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════
+     PAGE 1: AUTH
+════════════════════════════════════════════════ -->
+<div id="authPage" class="page active auth-page">
+  <div class="auth-bg"></div>
+  <div class="auth-dots"></div>
+
+  <!-- LOGIN CARD -->
+  <div class="auth-card" id="loginCard">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">✈️</div>
+      <div class="auth-logo-name">Wander<span>Student</span></div>
+    </div>
+    <div class="auth-title">Welcome Back ✌️</div>
+    <p class="auth-sub">Your AI travel companion for budget adventures is waiting.</p>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="you@college.edu" />
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" />
+    </div>
+    <div class="err-msg" id="loginErr" style="display:none"></div>
+    <button class="btn-primary" onclick="handleLogin()">Sign In →</button>
+    <div class="auth-divider">or</div>
+    <button class="btn-primary" style="background:var(--card2);border:1px solid var(--border);color:var(--text)" onclick="guestLogin()">Continue as Guest 👀</button>
+    <div class="auth-switch">New here? <a onclick="toggleAuth()">Create your account</a></div>
+  </div>
+
+  <!-- REGISTER CARD -->
+  <div class="auth-card" id="registerCard" style="display:none">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">✈️</div>
+      <div class="auth-logo-name">Wander<span>Student</span></div>
+    </div>
+    <div class="auth-title">Join the Pack 🎒</div>
+    <p class="auth-sub">Create your account and start planning affordable adventures.</p>
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="regName" placeholder="e.g. Priya Sharma" />
+    </div>
+    <div class="form-group">
+      <label>College Email</label>
+      <input type="email" id="regEmail" placeholder="you@college.edu" />
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="regPassword" placeholder="min. 6 characters" />
+    </div>
+    <div class="err-msg" id="registerErr" style="display:none"></div>
+    <button class="btn-primary" onclick="handleRegister()">Create Account →</button>
+    <div class="auth-switch">Already have an account? <a onclick="toggleAuth()">Sign in</a></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     PAGE 2: DASHBOARD
+════════════════════════════════════════════════ -->
+<div id="dashPage" class="page dashboard-page">
+  <nav class="navbar">
+    <div class="nav-logo" onclick="showPage('dash')">Wander<span>Student</span></div>
+    <div class="nav-right">
+      <div class="nav-user">
+        <div class="nav-avatar" id="navAvatar">?</div>
+        <span id="navName">User</span>
+      </div>
+      <button class="btn-sm" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="dash-body">
+    <!-- Greeting -->
+    <div class="dash-hero">
+      <div class="dash-hero-bg"></div>
+      <div class="dash-hero-content">
+        <div class="dash-greeting">Hey, <span id="dashName">Traveller</span> 👋</div>
+        <div class="dash-greeting-sub">Where are you heading next? Let AI plan it for you.</div>
+        <div class="dash-stats">
+          <div class="dash-stat"><div class="dash-stat-val" id="statTrips">0</div><div class="dash-stat-label">Trips Planned</div></div>
+          <div class="dash-stat"><div class="dash-stat-val" id="statSaved">₹0</div><div class="dash-stat-label">Est. Saved</div></div>
+          <div class="dash-stat"><div class="dash-stat-val">∞</div><div class="dash-stat-label">Adventures Awaiting</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Feature Grid -->
+    <div class="section-hd">
+      <h2>AI-Powered Tools</h2>
+      <p>Pick a tool and let our AI do the heavy lifting</p>
+    </div>
+    <div class="dash-grid">
+      <div class="feature-card" style="--feature-color:rgba(245,158,11,0.07);--feature-border:rgba(245,158,11,0.3)" onclick="showPage('planner');activateTab('itinerary')">
+        <span class="feature-icon">🗺️</span>
+        <div class="feature-name">AI Trip Planner</div>
+        <div class="feature-desc">Generate a complete day-by-day itinerary based on your budget, destination & interests.</div>
+        <div class="ai-badge">⚡ AI Streaming</div>
+      </div>
+      <div class="feature-card" style="--feature-color:rgba(16,185,129,0.07);--feature-border:rgba(16,185,129,0.3)" onclick="showPage('planner');activateTab('finder')">
+        <span class="feature-icon">🎯</span>
+        <div class="feature-name">AI Destination Finder</div>
+        <div class="feature-desc">Don't know where to go? Tell AI your budget and get 3 perfect destination recommendations.</div>
+        <div class="ai-badge">⚡ Generative AI</div>
+      </div>
+      <div class="feature-card" style="--feature-color:rgba(6,182,212,0.07);--feature-border:rgba(6,182,212,0.3)" onclick="showPage('planner');activateTab('compare')">
+        <span class="feature-icon">📊</span>
+        <div class="feature-name">AI Trip Comparator</div>
+        <div class="feature-desc">Can't decide between two places? Get an AI-powered side-by-side comparison instantly.</div>
+        <div class="ai-badge">⚡ Generative AI</div>
+      </div>
+      <div class="feature-card" style="--feature-color:rgba(59,130,246,0.07);--feature-border:rgba(59,130,246,0.3)" onclick="showPage('planner');activateTab('phrases')">
+        <span class="feature-icon">🌍</span>
+        <div class="feature-name">AI Phrasebook</div>
+        <div class="feature-desc">Learn essential local language phrases with pronunciation for any destination.</div>
+        <div class="ai-badge">⚡ Generative AI</div>
+      </div>
+      <div class="feature-card" style="--feature-color:rgba(239,68,68,0.07);--feature-border:rgba(239,68,68,0.3)" onclick="showPage('planner');activateTab('food')">
+        <span class="feature-icon">🍜</span>
+        <div class="feature-name">AI Street Food Guide</div>
+        <div class="feature-desc">Discover the best local dishes, their prices, and exactly where to eat them.</div>
+        <div class="ai-badge">⚡ Generative AI</div>
+      </div>
+      <div class="feature-card" style="--feature-color:rgba(168,85,247,0.07);--feature-border:rgba(168,85,247,0.3)" onclick="showPage('planner');activateTab('split')">
+        <span class="feature-icon">👥</span>
+        <div class="feature-name">Group Cost Splitter</div>
+        <div class="feature-desc">Add shared expenses and split them fairly across your squad.</div>
+        <div class="ai-badge">Interactive Tool</div>
+      </div>
+    </div>
+
+    <!-- Saved Trips -->
+    <div class="section-hd" style="margin-top:1rem">
+      <h2>Your Saved Trips</h2>
+      <p>Trips you've planned — click to view</p>
+    </div>
+    <div class="saved-trips-grid" id="savedTripsGrid">
+      <div class="empty-trips">No trips saved yet. Plan one above! 🏖️</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     PAGE 3: PLANNER
+════════════════════════════════════════════════ -->
+<div id="plannerPage" class="page planner-page">
+  <nav class="navbar">
+    <div class="nav-logo" onclick="showPage('dash')">Wander<span>Student</span></div>
+    <div class="nav-right">
+      <button class="btn-sm btn-accent" onclick="showPage('dash')">← Dashboard</button>
+      <div class="nav-user">
+        <div class="nav-avatar" id="navAvatar2">?</div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="planner-body">
+
+    <!-- ── TRIP FORM ── -->
+    <div class="section-hd">
+      <h2>Plan Your Trip ✈️</h2>
+      <p>Fill in details — AI will generate everything</p>
+    </div>
+
+    <div class="form-card">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>From City</label>
+          <input type="text" id="pFrom" placeholder="e.g. Bengaluru" />
+        </div>
+        <div class="form-group">
+          <label>Destination</label>
+          <input type="text" id="pDest" placeholder="e.g. Goa, Manali, Ooty" />
+        </div>
+        <div class="form-group">
+          <label>Duration</label>
+          <select id="pDuration">
+            <option>Weekend (2 days)</option>
+            <option>3 Days</option>
+            <option selected>4 Days</option>
+            <option>5 Days</option>
+            <option>1 Week</option>
+            <option>10 Days</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Budget per person (₹)</label>
+          <input type="number" id="pBudget" placeholder="e.g. 5000" />
+        </div>
+        <div class="form-group">
+          <label>Group Size</label>
+          <input type="number" id="pGroup" value="1" min="1" placeholder="1" />
+        </div>
+        <div class="form-group">
+          <label>Travel Month</label>
+          <select id="pMonth">
+            <option>January</option><option>February</option><option>March</option>
+            <option>April</option><option>May</option><option>June</option>
+            <option>July</option><option>August</option><option>September</option>
+            <option>October</option><option>November</option><option selected>December</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:1rem">
+        <label>Interests</label>
+        <div class="tags-row" id="iTags">
+          <button class="tag active" onclick="toggleTag(this)">🏖️ Beach</button>
+          <button class="tag" onclick="toggleTag(this)">🏔️ Mountains</button>
+          <button class="tag" onclick="toggleTag(this)">🏛️ Culture</button>
+          <button class="tag" onclick="toggleTag(this)">🍜 Food</button>
+          <button class="tag active" onclick="toggleTag(this)">🎉 Nightlife</button>
+          <button class="tag" onclick="toggleTag(this)">🌿 Trekking</button>
+          <button class="tag" onclick="toggleTag(this)">📸 Photography</button>
+          <button class="tag" onclick="toggleTag(this)">🛕 Spiritual</button>
+          <button class="tag" onclick="toggleTag(this)">🛍️ Shopping</button>
+          <button class="tag" onclick="toggleTag(this)">🧘 Wellness</button>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:1.5rem">
+        <label>Accommodation</label>
+        <div class="tags-row" id="aTags">
+          <button class="tag active" onclick="singleTag(this,'aTags')">🛏️ Hostel/Dorm</button>
+          <button class="tag" onclick="singleTag(this,'aTags')">🏨 Budget Hotel</button>
+          <button class="tag" onclick="singleTag(this,'aTags')">🏕️ Camping</button>
+          <button class="tag" onclick="singleTag(this,'aTags')">🏘️ Homestay</button>
+        </div>
+      </div>
+
+      <button class="btn-generate" id="genBtn" onclick="generateAll()">
+        <span>✨</span> Generate My AI Trip Plan
+      </button>
+    </div>
+
+    <!-- ── TABS ── -->
+    <div class="tabs-row">
+      <button class="tab-btn active" onclick="activateTab('itinerary')">🗺️ Itinerary</button>
+      <button class="tab-btn" onclick="activateTab('budget')">💸 Budget</button>
+      <button class="tab-btn" onclick="activateTab('packing')">🎒 Packing</button>
+      <button class="tab-btn" onclick="activateTab('transport')">🚌 Transport</button>
+      <button class="tab-btn" onclick="activateTab('food')">🍜 Food Guide</button>
+      <button class="tab-btn" onclick="activateTab('safety')">🚨 Safety</button>
+      <button class="tab-btn" onclick="activateTab('phrases')">🌍 Phrasebook</button>
+      <button class="tab-btn" onclick="activateTab('finder')">🎯 Dest. Finder</button>
+      <button class="tab-btn" onclick="activateTab('compare')">📊 Compare</button>
+      <button class="tab-btn" onclick="activateTab('split')">👥 Split</button>
+    </div>
+
+    <!-- ── TAB: ITINERARY ── -->
+    <div class="tab-pane active" id="tab-itinerary">
+      <div class="output-card" id="out-itinerary">
+        <div class="empty-state"><span class="empty-icon">🗺️</span>Generate your trip plan above!</div>
+      </div>
+      <button class="btn-sm btn-accent" id="saveTrip" onclick="saveTripToProfile()" style="display:none">💾 Save Trip to Profile</button>
+    </div>
+
+    <!-- ── TAB: BUDGET ── -->
+    <div class="tab-pane" id="tab-budget">
+      <div class="budget-visual" id="budgetBars" style="display:none">
+        <div class="bv-item">
+          <div class="bv-top"><div class="bv-label">🚌 Transport</div><div class="bv-amount" id="bv-t">₹0</div></div>
+          <div class="bv-bar-wrap"><div class="bv-bar" id="bar-t" style="background:var(--accent)"></div></div>
+          <div class="bv-pct" id="pct-t">30% of budget</div>
+        </div>
+        <div class="bv-item">
+          <div class="bv-top"><div class="bv-label">🛏️ Stay</div><div class="bv-amount" id="bv-s">₹0</div></div>
+          <div class="bv-bar-wrap"><div class="bv-bar" id="bar-s" style="background:var(--teal)"></div></div>
+          <div class="bv-pct" id="pct-s">35% of budget</div>
+        </div>
+        <div class="bv-item">
+          <div class="bv-top"><div class="bv-label">🍜 Food</div><div class="bv-amount" id="bv-f">₹0</div></div>
+          <div class="bv-bar-wrap"><div class="bv-bar" id="bar-f" style="background:var(--accent2)"></div></div>
+          <div class="bv-pct" id="pct-f">25% of budget</div>
+        </div>
+        <div class="bv-item">
+          <div class="bv-top"><div class="bv-label">🎡 Activities</div><div class="bv-amount" id="bv-a">₹0</div></div>
+          <div class="bv-bar-wrap"><div class="bv-bar" id="bar-a" style="background:#a78bfa"></div></div>
+          <div class="bv-pct" id="pct-a">10% of budget</div>
+        </div>
+      </div>
+      <div class="output-card" id="out-budget">
+        <div class="empty-state"><span class="empty-icon">💸</span>Generate your plan first!</div>
+      </div>
+    </div>
+
+    <!-- ── TAB: PACKING ── -->
+    <div class="tab-pane" id="tab-packing">
+      <div class="output-card" id="out-packing">
+        <div class="empty-state"><span class="empty-icon">🎒</span>Generate your plan first!</div>
+      </div>
+    </div>
+
+    <!-- ── TAB: TRANSPORT ── -->
+    <div class="tab-pane" id="tab-transport">
+      <div class="output-card" id="out-transport">
+        <div class="empty-state"><span class="empty-icon">🚌</span>Generate your plan first!</div>
+      </div>
+    </div>
+
+    <!-- ── TAB: FOOD GUIDE ── -->
+    <div class="tab-pane" id="tab-food">
+      <div class="output-card" id="out-food">
+        <div class="empty-state"><span class="empty-icon">🍜</span>Generate your plan to get local food guide!</div>
+      </div>
+    </div>
+
+    <!-- ── TAB: SAFETY ── -->
+    <div class="tab-pane" id="tab-safety">
+      <div class="output-card" id="out-safety">
+        <div class="empty-state"><span class="empty-icon">🚨</span>Generate your plan to get safety briefing!</div>
+      </div>
+    </div>
+
+    <!-- ── TAB: PHRASEBOOK ── -->
+    <div class="tab-pane" id="tab-phrases">
+      <div class="info-banner"><span>💡</span>AI will generate key phrases in the local language of your destination with pronunciation guides. Click any phrase card to hear it spoken!</div>
+      <div class="output-card" id="out-phrases">
+        <div class="empty-state"><span class="empty-icon">🌍</span>Generate your plan to unlock the phrasebook!</div>
+      </div>
+    </div>
+
+    <!-- ── TAB: DESTINATION FINDER ── -->
+    <div class="tab-pane" id="tab-finder">
+      <div class="form-card">
+        <div class="section-hd"><h2>🎯 AI Destination Finder</h2><p>Don't know where to go? Let AI pick for you.</p></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Your City</label>
+            <input type="text" id="fFrom" placeholder="e.g. Mumbai" />
+          </div>
+          <div class="form-group">
+            <label>Budget per person (₹)</label>
+            <input type="number" id="fBudget" placeholder="e.g. 4000" />
+          </div>
+          <div class="form-group">
+            <label>Duration</label>
+            <select id="fDuration">
+              <option>Weekend (2 days)</option>
+              <option selected>3 Days</option>
+              <option>4 Days</option>
+              <option>1 Week</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Month</label>
+            <select id="fMonth">
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option selected>December</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:1.2rem">
+          <label>Vibe</label>
+          <div class="tags-row" id="fTags">
+            <button class="tag active" onclick="toggleTag(this)">🏖️ Beach</button>
+            <button class="tag" onclick="toggleTag(this)">🏔️ Hills</button>
+            <button class="tag" onclick="toggleTag(this)">🏛️ Heritage</button>
+            <button class="tag active" onclick="toggleTag(this)">🌿 Nature</button>
+            <button class="tag" onclick="toggleTag(this)">🎉 Party</button>
+            <button class="tag" onclick="toggleTag(this)">🧘 Peaceful</button>
+          </div>
+        </div>
+        <button class="btn-generate" onclick="findDestinations()">🎯 Find Me Destinations</button>
+      </div>
+      <div id="finderResults" class="dest-results" style="display:none"></div>
+    </div>
+
+    <!-- ── TAB: COMPARE ── -->
+    <div class="tab-pane" id="tab-compare">
+      <div class="form-card">
+        <div class="section-hd"><h2>📊 AI Trip Comparator</h2><p>Can't decide? Let AI compare two destinations for you.</p></div>
+        <div class="compare-grid">
+          <div class="form-group">
+            <label>Destination A</label>
+            <input type="text" id="cDest1" placeholder="e.g. Goa" />
+          </div>
+          <div class="form-group">
+            <label>Destination B</label>
+            <input type="text" id="cDest2" placeholder="e.g. Pondicherry" />
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Budget per person (₹)</label>
+            <input type="number" id="cBudget" placeholder="5000" />
+          </div>
+          <div class="form-group">
+            <label>Duration</label>
+            <select id="cDuration">
+              <option>Weekend</option>
+              <option selected>3-4 Days</option>
+              <option>1 Week</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-generate" onclick="compareDestinations()">⚡ Compare with AI</button>
+      </div>
+      <div class="output-card" id="out-compare" style="display:none"></div>
+    </div>
+
+    <!-- ── TAB: SPLIT ── -->
+    <div class="tab-pane" id="tab-split">
+      <div class="form-card">
+        <div class="section-hd"><h2>👥 Group Cost Splitter</h2><p>Add all expenses and split them among friends.</p></div>
+        <div id="expenseRows">
+          <div class="expense-row">
+            <input type="text" placeholder="Expense name (e.g. Hotel)" style="flex:2" class="ename" />
+            <input type="number" placeholder="₹ Amount" style="flex:1" class="eamt" />
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin:1rem 0;flex-wrap:wrap;align-items:flex-end">
+          <button class="btn-sm" onclick="addExpense()">+ Add Expense</button>
+          <div class="form-group" style="flex:1;min-width:120px">
+            <label>No. of People</label>
+            <input type="number" id="splitPpl" value="2" min="1" />
+          </div>
+          <button class="btn-sm btn-accent" onclick="calcSplit()">Calculate</button>
+        </div>
+        <div id="splitResult" style="display:none" class="split-result">
+          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.1em">Each person pays</div>
+          <div class="split-amount" id="splitAmt">₹0</div>
+          <div class="split-meta" id="splitMeta"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /planner-body -->
+</div><!-- /plannerPage -->
+
+<!-- ════════════════════════════════════════════════
+     FLOATING AI CHAT
+════════════════════════════════════════════════ -->
+<button class="chat-bubble-btn" onclick="toggleChat()" title="Ask AI anything">🤖</button>
+
+<div class="chat-panel hidden" id="chatPanel">
+  <div class="chat-header">
+    <div class="chat-ai-icon">🤖</div>
+    <div>
+      <div class="chat-ai-name">TravelBot AI</div>
+      <div class="chat-ai-status">Online · Powered by Claude</div>
+    </div>
+    <button class="btn-sm" style="margin-left:auto;padding:4px 10px;font-size:0.75rem" onclick="toggleChat()">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="chat-msg ai">
+      Hey! I'm your AI travel buddy 👋 Ask me anything about your trip — best routes, local tips, hidden gems, budget hacks, or safety advice.
+      <div class="chat-chips">
+        <span class="chat-chip" onclick="askChip(this)">Best student discounts?</span>
+        <span class="chat-chip" onclick="askChip(this)">How to travel cheaply?</span>
+        <span class="chat-chip" onclick="askChip(this)">Safest transport option?</span>
+        <span class="chat-chip" onclick="askChip(this)">Best street food tips?</span>
+      </div>
+    </div>
+  </div>
+  <div class="chat-input-row">
+    <textarea class="chat-input" id="chatInput" placeholder="Ask anything about your trip..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+    <button class="chat-send" id="chatSendBtn" onclick="sendChat()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════ -->
+<script>
+// ─── STATE ───
+let currentUser = null;
+let lastTrip = null;
+
+// ─── INIT ───
+window.onload = () => {
+  const saved = localStorage.getItem('ws_user');
+  if (saved) {
+    currentUser = JSON.parse(saved);
+    enterApp();
+  }
+};
+
+// ─── AUTH ───
+function toggleAuth() {
+  const l = document.getElementById('loginCard');
+  const r = document.getElementById('registerCard');
+  l.style.display = l.style.display === 'none' ? 'block' : 'none';
+  r.style.display = r.style.display === 'none' ? 'block' : 'none';
+}
+
+function handleLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPassword').value;
+  const err   = document.getElementById('loginErr');
+  err.style.display = 'none';
+
+  if (!email || !pass) { err.textContent = 'Please fill all fields.'; err.style.display = 'block'; return; }
+
+  const users = JSON.parse(localStorage.getItem('ws_users') || '[]');
+  const user  = users.find(u => u.email === email && u.password === pass);
+  if (!user) { err.textContent = 'Invalid email or password.'; err.style.display = 'block'; return; }
+
+  currentUser = user;
+  localStorage.setItem('ws_user', JSON.stringify(user));
+  enterApp();
+}
+
+function handleRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass  = document.getElementById('regPassword').value;
+  const err   = document.getElementById('registerErr');
+  err.style.display = 'none';
+
+  if (!name || !email || !pass) { err.textContent = 'Please fill all fields.'; err.style.display = 'block'; return; }
+  if (pass.length < 6) { err.textContent = 'Password must be at least 6 characters.'; err.style.display = 'block'; return; }
+
+  const users = JSON.parse(localStorage.getItem('ws_users') || '[]');
+  if (users.find(u => u.email === email)) { err.textContent = 'Email already registered.'; err.style.display = 'block'; return; }
+
+  const user = { name, email, password: pass, trips: [], savedAmount: 0 };
+  users.push(user);
+  localStorage.setItem('ws_users', JSON.stringify(users));
+  currentUser = user;
+  localStorage.setItem('ws_user', JSON.stringify(user));
+  enterApp();
+}
+
+function guestLogin() {
+  currentUser = { name: 'Traveller', email: 'guest', trips: [], savedAmount: 0 };
+  enterApp();
+}
+
+function logout() {
+  localStorage.removeItem('ws_user');
+  currentUser = null;
+  showPage('auth');
+}
+
+function enterApp() {
+  updateNavUI();
+  renderDashboard();
+  showPage('dash');
+}
+
+function updateNavUI() {
+  const name = currentUser?.name || 'User';
+  const initial = name[0].toUpperCase();
+  document.getElementById('navAvatar').textContent  = initial;
+  document.getElementById('navAvatar2').textContent = initial;
+  document.getElementById('navName').textContent    = name.split(' ')[0];
+  document.getElementById('dashName').textContent   = name.split(' ')[0];
+}
+
+// ─── PAGES ───
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const map = { auth: 'authPage', dash: 'dashPage', planner: 'plannerPage' };
+  document.getElementById(map[page]).classList.add('active');
+}
+
+// ─── DASHBOARD ───
+function renderDashboard() {
+  const trips = currentUser?.trips || [];
+  document.getElementById('statTrips').textContent = trips.length;
+  document.getElementById('statSaved').textContent = '₹' + (currentUser?.savedAmount || 0).toLocaleString();
+
+  const grid = document.getElementById('savedTripsGrid');
+  if (trips.length === 0) {
+    grid.innerHTML = '<div class="empty-trips">No trips saved yet. Plan one! 🏖️</div>';
+    return;
+  }
+  grid.innerHTML = trips.map(t => `
+    <div class="trip-card">
+      <div class="trip-dest">${t.dest}</div>
+      <div class="trip-meta">${t.duration} · ₹${t.budget}</div>
+      <div class="trip-chip">${t.month}</div>
+    </div>
+  `).join('');
+}
+
+// ─── TABS ───
+function activateTab(id) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  const tabOrder = ['itinerary','budget','packing','transport','food','safety','phrases','finder','compare','split'];
+  const idx = tabOrder.indexOf(id);
+  if (idx >= 0) document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+}
+
+// ─── TAG HELPERS ───
+function toggleTag(btn) { btn.classList.toggle('active'); }
+function singleTag(btn, groupId) {
+  document.querySelectorAll(`#${groupId} .tag`).forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ─── CLAUDE API ───
+async function askClaude(prompt, outputEl, streaming = true) {
+  if (!streaming) {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    return data.content?.[0]?.text || "Couldn't generate a response.";
+  }
+
+  // ── STREAMING ──
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      stream: true,
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+
+  let fullText = '';
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+
+  outputEl.innerHTML = '';
+  const cursor = document.createElement('span');
+  cursor.className = 'streaming-cursor';
+  outputEl.appendChild(cursor);
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value);
+    const lines = chunk.split('\n').filter(l => l.startsWith('data: '));
+    for (const line of lines) {
+      const raw = line.slice(6);
+      if (raw === '[DONE]') continue;
+      try {
+        const json = JSON.parse(raw);
+        if (json.type === 'content_block_delta' && json.delta?.text) {
+          fullText += json.delta.text;
+          outputEl.innerHTML = renderMarkdown(fullText);
+          outputEl.appendChild(cursor);
+          outputEl.parentElement?.scrollTo(0, outputEl.parentElement.scrollHeight);
+        }
+      } catch(_) {}
+    }
+  }
+  outputEl.innerHTML = renderMarkdown(fullText);
+  return fullText;
+}
+
+function renderMarkdown(text) {
+  return text
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^\* (.+)$/gm, '<li>$1</li>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/^(\d+)\. (.+)$/gm, '<li><strong>$1.</strong> $2</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)+/g, m => '<ul>' + m + '</ul>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/^(?!<[hup])/gm, '')
+    .replace(/---/g, '<hr>')
+    .trim();
+}
+
+function setLoading(id) {
+  const el = document.getElementById(id);
+  el.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+}
+
+// ─── TRIP INFO ───
+function getTripContext() {
+  return {
+    from:    document.getElementById('pFrom').value || 'your city',
+    dest:    document.getElementById('pDest').value,
+    dur:     document.getElementById('pDuration').value,
+    budget:  document.getElementById('pBudget').value || '5000',
+    group:   document.getElementById('pGroup').value || '1',
+    month:   document.getElementById('pMonth').value,
+    vibe:    [...document.querySelectorAll('#iTags .tag.active')].map(t=>t.textContent.trim()).join(', ') || 'General',
+    accom:   document.querySelector('#aTags .tag.active')?.textContent.trim() || 'Hostel'
+  };
+}
+
+// ─── MAIN GENERATE ───
+async function generateAll() {
+  const t = getTripContext();
+  if (!t.dest) { alert('Please enter a destination!'); return; }
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:22px;height:22px;border-width:2px"></div> Generating your AI plan...';
+
+  activateTab('itinerary');
+  lastTrip = t;
+
+  const ctx = `Student trip: ${t.from} → ${t.dest} | ${t.dur} | Budget: ₹${t.budget}/person | Group: ${t.group} | Month: ${t.month} | Interests: ${t.vibe} | Stay: ${t.accom}`;
+
+  try {
+    // ── ITINERARY (streaming) ──
+    const out = document.getElementById('out-itinerary');
+    out.innerHTML = '';
+    await askClaude(
+      `You are a student travel expert in India. Create a fun, detailed day-by-day itinerary. ${ctx}. Format with Day headings (## Day 1: ...), Morning/Afternoon/Evening subsections (### Morning). Include FREE or cheap activities, street food, and student-friendly spots. Use emojis liberally. End with a "💡 Pro Tips" section.`,
+      out, true
+    );
+    document.getElementById('saveTrip').style.display = 'inline-block';
+
+    // ── REMAINING (parallel, non-streaming) ──
+    setLoading('out-budget'); setLoading('out-packing');
+    setLoading('out-transport'); setLoading('out-food');
+    setLoading('out-safety'); setLoading('out-phrases');
+
+    const [budget, packing, transport, food, safety, phrases] = await Promise.all([
+      askClaude(`Student budget travel breakdown for: ${ctx}. Give exact INR estimates for: Transport (to/from + local), Stay, Food (all meals), Activities, Miscellaneous. Then list 5 specific money-saving hacks for ${t.dest}. Use ## headers and be specific with numbers.`, null, false),
+      askClaude(`Create a smart minimal packing list for a student: ${ctx}. Categories: ## Clothes, ## Toiletries, ## Tech, ## Documents & Money, ## Snacks, ## First Aid. Keep it short — student travel. Add a ## Don't Forget! section at the end. Use emojis.`, null, false),
+      askClaude(`Compare transport from ${t.from} to ${t.dest} in ${t.month} for a student. For each mode (Sleeper Bus, Train, Flight if short, Shared Cab): cost estimate, duration, comfort, student tip. Format as clear sections. Recommend the BEST option at the end.`, null, false),
+      askClaude(`Create a street food guide for ${t.dest} for a student traveler. List 8-10 must-eat dishes with: dish name, approximate price (₹), where to find it, and what makes it special. Then give 3 budget restaurant recommendations. Use emojis and ## headers.`, null, false),
+      askClaude(`Give a student safety briefing for ${t.dest} in ${t.month}. Sections: ## General Safety Tips, ## Common Scams to Avoid, ## Emergency Contacts (general), ## Digital Safety (apps, data, UPI), ## Health & Medical Tips, ## For Solo Female Travellers (if relevant). Be practical and honest.`, null, false),
+      askClaude(`Generate a phrasebook for a traveler going to ${t.dest}. Identify the LOCAL language spoken there. Provide 12 essential phrases a tourist needs. For each phrase give: English meaning, Local language text, Romanized pronunciation, and when to use it. Format each as: ### [English phrase] | [Local text] | Pronunciation: [guide]. Include greetings, directions, food orders, bargaining, and emergency phrases.`, null, false),
+    ]);
+
+    document.getElementById('out-budget').innerHTML = renderMarkdown(budget);
+    document.getElementById('out-packing').innerHTML = renderMarkdown(packing);
+    document.getElementById('out-transport').innerHTML = renderMarkdown(transport);
+    document.getElementById('out-food').innerHTML = renderMarkdown(food);
+    document.getElementById('out-safety').innerHTML = renderMarkdown(safety);
+    document.getElementById('out-phrases').innerHTML = renderMarkdown(phrases);
+
+    // Budget bars
+    showBudgetBars(parseInt(t.budget));
+
+    // Update chat context
+    window._tripCtx = ctx;
+
+  } catch(e) {
+    document.getElementById('out-itinerary').innerHTML = `<div class="empty-state"><span class="empty-icon">⚠️</span><div>Something went wrong: ${e.message}</div></div>`;
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<span>✨</span> Regenerate Plan';
+}
+
+function showBudgetBars(total) {
+  const pcts = { t:30, s:35, f:25, a:10 };
+  const vals = {};
+  for (const k in pcts) vals[k] = Math.round(total * pcts[k] / 100);
+
+  document.getElementById('bv-t').textContent = '₹' + vals.t.toLocaleString();
+  document.getElementById('bv-s').textContent = '₹' + vals.s.toLocaleString();
+  document.getElementById('bv-f').textContent = '₹' + vals.f.toLocaleString();
+  document.getElementById('bv-a').textContent = '₹' + vals.a.toLocaleString();
+
+  document.getElementById('budgetBars').style.display = 'grid';
+  setTimeout(() => {
+    document.getElementById('bar-t').style.width = pcts.t + '%';
+    document.getElementById('bar-s').style.width = pcts.s + '%';
+    document.getElementById('bar-f').style.width = pcts.f + '%';
+    document.getElementById('bar-a').style.width = pcts.a + '%';
+  }, 200);
+}
+
+// ─── SAVE TRIP ───
+function saveTripToProfile() {
+  if (!lastTrip || !currentUser) return;
+  const trip = { dest: lastTrip.dest, duration: lastTrip.dur, budget: lastTrip.budget, month: lastTrip.month, date: new Date().toLocaleDateString() };
+  currentUser.trips = currentUser.trips || [];
+  currentUser.trips.push(trip);
+  currentUser.savedAmount = (currentUser.savedAmount || 0) + Math.round(parseInt(lastTrip.budget) * 0.3);
+
+  if (currentUser.email !== 'guest') {
+    const users = JSON.parse(localStorage.getItem('ws_users') || '[]');
+    const idx = users.findIndex(u => u.email === currentUser.email);
+    if (idx >= 0) users[idx] = currentUser;
+    localStorage.setItem('ws_users', JSON.stringify(users));
+    localStorage.setItem('ws_user', JSON.stringify(currentUser));
+  }
+
+  renderDashboard();
+  const btn = document.getElementById('saveTrip');
+  btn.textContent = '✅ Saved!';
+  btn.disabled = true;
+  setTimeout(() => { btn.textContent = '💾 Save Trip'; btn.disabled = false; }, 2000);
+}
+
+// ─── DESTINATION FINDER ───
+async function findDestinations() {
+  const from   = document.getElementById('fFrom').value || 'your city';
+  const budget = document.getElementById('fBudget').value || '5000';
+  const dur    = document.getElementById('fDuration').value;
+  const month  = document.getElementById('fMonth').value;
+  const vibe   = [...document.querySelectorAll('#fTags .tag.active')].map(t=>t.textContent.trim()).join(', ') || 'General';
+
+  const resultsDiv = document.getElementById('finderResults');
+  resultsDiv.style.display = 'grid';
+  resultsDiv.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem"><div class="spinner" style="margin:auto"></div><p style="color:var(--muted);margin-top:1rem;font-size:0.85rem">AI is finding perfect destinations...</p></div>';
+
+  try {
+    const raw = await askClaude(
+      `You are a student travel expert. Recommend exactly 3 budget-friendly Indian destinations for a student traveling from ${from} for ${dur} in ${month} with budget ₹${budget}/person. Interests: ${vibe}. For each destination respond in EXACTLY this format:
+DESTINATION: [name]
+MATCH_SCORE: [score out of 10]
+WHY: [2-3 sentences on why it fits this student's criteria]
+COST_ESTIMATE: [brief cost note]
+HIGHLIGHT: [one unique thing about this place]
+---
+Give all 3, separated by ---`,
+      null, false
+    );
+
+    const blocks = raw.split('---').filter(b => b.trim());
+    resultsDiv.innerHTML = blocks.map(block => {
+      const get = (key) => { const m = block.match(new RegExp(key + ':\\s*(.+)')); return m ? m[1].trim() : ''; };
+      const name  = get('DESTINATION');
+      const score = get('MATCH_SCORE');
+      const why   = get('WHY');
+      const cost  = get('COST_ESTIMATE');
+      const hi    = get('HIGHLIGHT');
+      if (!name) return '';
+      return `
+        <div class="dest-card" onclick="prefillDest('${name}')">
+          <div class="dest-name">${name}</div>
+          <div class="dest-score">⭐ ${score}/10 Match</div>
+          <div class="dest-desc" style="margin-bottom:8px">${why}</div>
+          <div style="font-size:0.78rem;color:var(--accent);font-weight:600;margin-bottom:4px">💸 ${cost}</div>
+          <div style="font-size:0.78rem;color:var(--teal)">✨ ${hi}</div>
+          <div style="margin-top:10px"><button class="btn-sm btn-accent" style="font-size:0.75rem;padding:6px 12px">Plan this trip →</button></div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    resultsDiv.innerHTML = `<div style="grid-column:1/-1;color:var(--accent2);text-align:center">Error: ${e.message}</div>`;
+  }
+}
+
+function prefillDest(name) {
+  document.getElementById('pDest').value = name;
+  document.getElementById('fBudget').value && (document.getElementById('pBudget').value = document.getElementById('fBudget').value);
+  activateTab('itinerary');
+  document.getElementById('pDest').focus();
+  document.getElementById('pDest').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ─── COMPARE ───
+async function compareDestinations() {
+  const d1 = document.getElementById('cDest1').value;
+  const d2 = document.getElementById('cDest2').value;
+  const b  = document.getElementById('cBudget').value || '5000';
+  const du = document.getElementById('cDuration').value;
+  if (!d1 || !d2) { alert('Please enter both destinations!'); return; }
+
+  const out = document.getElementById('out-compare');
+  out.style.display = 'block';
+  await askClaude(
+    `As a student travel expert, compare ${d1} vs ${d2} for a student with budget ₹${b} for ${du}. Structure the comparison with:
+## ${d1} vs ${d2}: Head-to-Head
+### 💰 Cost Comparison
+### 🌤️ Weather & Best Time
+### 🚌 Ease of Getting There
+### 🎒 Student Friendliness
+### 🎉 Things to Do
+### 🍜 Food Scene
+### 🏆 Verdict: Which should you choose?
+Be direct, opinionated, and helpful. Tell them exactly which is better for a student trip.`,
+    out, true
+  );
+}
+
+// ─── SPLIT ───
+function addExpense() {
+  const row = document.createElement('div');
+  row.className = 'expense-row';
+  row.innerHTML = `
+    <input type="text" placeholder="Expense name" style="flex:2" class="ename" />
+    <input type="number" placeholder="₹ Amount" style="flex:1" class="eamt" />
+    <button class="btn-sm" onclick="this.parentElement.remove()" style="padding:7px 10px;flex-shrink:0">✕</button>`;
+  document.getElementById('expenseRows').appendChild(row);
+}
+
+function calcSplit() {
+  const amounts = [...document.querySelectorAll('.eamt')].map(i => parseFloat(i.value) || 0);
+  const names   = [...document.querySelectorAll('.ename')].map(i => i.value || 'Expense');
+  const ppl     = parseInt(document.getElementById('splitPpl').value) || 1;
+  const total   = amounts.reduce((a,b) => a+b, 0);
+  const each    = Math.ceil(total / ppl);
+
+  document.getElementById('splitAmt').textContent = '₹' + each.toLocaleString();
+  document.getElementById('splitMeta').textContent = `Total ₹${total.toLocaleString()} ÷ ${ppl} people`;
+  document.getElementById('splitResult').style.display = 'block';
+}
+
+// ─── CHAT ───
+let chatOpen = false;
+let chatHistory = [];
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  document.getElementById('chatPanel').classList.toggle('hidden', !chatOpen);
+}
+
+function askChip(el) {
+  document.getElementById('chatInput').value = el.textContent;
+  sendChat();
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+
+  addChatMsg(msg, 'user');
+  document.getElementById('chatSendBtn').disabled = true;
+
+  const tripCtx = window._tripCtx ? `Context: ${window._tripCtx}. ` : '';
+  chatHistory.push({ role: 'user', content: tripCtx + msg });
+
+  // Streaming in chat
+  const aiDiv = document.createElement('div');
+  aiDiv.className = 'chat-msg ai';
+  document.getElementById('chatMessages').appendChild(aiDiv);
+
+  try {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 400,
+        stream: true,
+        system: "You are TravelBot, a friendly and knowledgeable student travel assistant in India. Give short, practical, specific advice. Use emojis occasionally. Keep responses under 150 words.",
+        messages: chatHistory.slice(-6)
+      })
+    });
+
+    let fullText = '';
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const lines = decoder.decode(value).split('\n').filter(l => l.startsWith('data: '));
+      for (const line of lines) {
+        try {
+          const json = JSON.parse(line.slice(6));
+          if (json.delta?.text) {
+            fullText += json.delta.text;
+            aiDiv.textContent = fullText;
+            document.getElementById('chatMessages').scrollTop = 9999;
+          }
+        } catch(_) {}
+      }
+    }
+    chatHistory.push({ role: 'assistant', content: fullText });
+  } catch(e) {
+    aiDiv.textContent = "Couldn't connect. Check API key.";
+  }
+
+  document.getElementById('chatSendBtn').disabled = false;
+}
+
+function addChatMsg(text, role) {
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  div.textContent = text;
+  const msgs = document.getElementById('chatMessages');
+  msgs.appendChild(div);
+  msgs.scrollTop = 9999;
+}
+</script>
+</body>
+</html>
